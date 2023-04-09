@@ -26,6 +26,9 @@ class BaseControl(Node):
         self.twist_pub.publish(self.twist_value)
         self.get_logger().info(f"Finish 'translateDist'.")
 
+    def rotateAngle(self):
+        print("ジャパン!")
+
 def main():
     rclpy.init()
     bc = BaseControl()
