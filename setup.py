@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'base_control = happymini_teleop.base_control:main'
+            'base_control = happymini_teleop.base_control:main',
+            'test_rcl = happymini_teleop.test_rcl:main'
         ],
     },
 )
