@@ -21,7 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             'base_control = happymini_teleop.base_control:main',
-            'test_rcl = happymini_teleop.test_rcl:main'
+            'output_odom = happymini_teleop.output_odom:main'
         ],
     },
 )

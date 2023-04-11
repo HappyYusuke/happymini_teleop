@@ -53,14 +53,14 @@ class BaseControl(Node):
 
     def publish_angular_z(self, max_speed, precision, time_out):
         over_flg = False
-        self.judg_deg = 999.9
+        vel_z = 0.0
         vel_max = max_speed
         kp = 0.1
         ki = 0.0
         kd = 0.0
         start_time = time.time()
         start_plot = time.time()
-        while self.round_down(self.judg_deg, precision) != self.round_down(self.current_deg, precision):
+        while self.round_down(self.judg_deg, precision) != self.round_down(self.current_deg, precision) and rclpy.ok():
             plot_time = time.time() - start_plot
             delta_time = time.time() - start_time
             # 0度をまたがないとき
@@ -126,12 +126,12 @@ class BaseControl(Node):
                 break
             if abs(vel_z) > vel_max:
                 vel_z = (vel_z/abs(vel_z))*vel_max
-            print(vel_z)
             self.twist_value.angular.z = vel_z
             self.twist_pub.publish(self.twist_value)
         self.twist_value.angular.z = 0.0
         self.twist_pub.publish(self.twist_value)
         self.sub_target_deg = 0.0
+        print(f"Finish deg: {self.round_down(self.current_deg, precision)}")
         self.get_logger().info("Finish 'rotate_angle'")
        
     def translate_dist(self, dist, speed = 0.2):
@@ -152,14 +152,17 @@ class BaseControl(Node):
         time.sleep(0.2)
         if deg >= 0.0:
             self.target_deg = self.current_deg + deg
+            self.judg_deg = self.target_deg
             if self.target_deg >= 360:
                 self.sub_target_deg = self.target_deg - 360
+                self.judg_deg = self.sub_target_deg
             else:
                 pass
         else:
             self.target_deg = self.target_deg = self.current_deg + deg
             if self.target_deg < 0.0:
                 self.sub_target_deg = 360 + self.target_deg
+                self.judg_deg = self.sub_target_deg
             else:
                 pass
         self.current_deg = self.round_down(self.current_deg, precision)
@@ -222,9 +225,9 @@ def main():
         thread = threading.Thread(target=rclpy.spin, args=(bc, ), daemon=True)
         thread.start()
         time.sleep(0.1)
-        bc.translate_dist(0.3)
+        #bc.translate_dist(0.3)
         #bc.rotate_angle(30)
-        #bc.odom_plot(30, 0, 0.5, 10)
+        bc.odom_plot(-90, 2, 0.2, 10)
     except KeyboardInterrupt:
         pass
     thread.join()
