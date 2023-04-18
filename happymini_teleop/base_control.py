@@ -22,7 +22,7 @@ class BaseControl(Node):
         self.target_time = 0.0
         self.target_deg = 0.0
         self.sub_target_deg = 0.0
-        self.current_deg = 0.0
+        self.current_deg = None
         self.judg_deg = 999.9
     
     def odom_callback(self, receive_msg):
@@ -35,7 +35,14 @@ class BaseControl(Node):
         self.current_deg = math.degrees(euler_from_quaternion(quaternion)[2])
         if self.current_deg < 0.0:
             self.current_deg = 180 + (180 - abs(self.current_deg))
-        #print(self.current_deg)
+
+    def odom_check(self):
+        self.current_deg = None
+        while self.current_deg is None and rclpy.ok():
+            rclpy.spin_once(self)
+            self.get_logger().info("No odom data ...")
+            time.sleep(0.7)
+        self.get_logger().info("Odom data is available !")
 
     def round_down(self, value, down_num=1):
         return math.floor(value * (10**down_num)) / (10**down_num)
@@ -50,17 +57,18 @@ class BaseControl(Node):
         self.twist_value.linear.x = 0.0
         self.twist_pub.publish(self.twist_value)
         self.get_logger().info("Finish 'translate_dist'")
-
+        
     def publish_angular_z(self, max_speed, precision, time_out):
         over_flg = False
         vel_z = 0.0
         vel_max = max_speed
-        kp = 0.1
+        kp = 0.01
         ki = 0.0
         kd = 0.0
         start_time = time.time()
         start_plot = time.time()
         while self.round_down(self.judg_deg, precision) != self.round_down(self.current_deg, precision) and rclpy.ok():
+            rclpy.spin_once(self)
             plot_time = time.time() - start_plot
             delta_time = time.time() - start_time
             # 0度をまたがないとき
@@ -131,9 +139,9 @@ class BaseControl(Node):
         self.twist_value.angular.z = 0.0
         self.twist_pub.publish(self.twist_value)
         self.sub_target_deg = 0.0
-        print(f"Finish deg: {self.round_down(self.current_deg, precision)}")
+        self.get_logger().info(f"Finish deg: {self.round_down(self.current_deg, precision)}")
         self.get_logger().info("Finish 'rotate_angle'")
-       
+ 
     def translate_dist(self, dist, speed = 0.2):
         try:
             dist = dist.data
@@ -145,6 +153,7 @@ class BaseControl(Node):
         self.publish_liner_x()
 
     def rotate_angle(self, deg, precision=0, speed=0.7, time_out=10):
+        self.odom_check()
         try:
             deg = deg.data
         except AttributeError:
@@ -169,9 +178,9 @@ class BaseControl(Node):
         self.target_deg = self.round_down(self.target_deg, precision)
         self.sub_target_deg = self.round_down(self.sub_target_deg, precision)
         self.get_logger().info("Start 'rotate_angle'")
-        print(f"current deg: {self.current_deg}")
-        print(f"target deg: {self.target_deg}")
-        print(f"sub_target deg: {self.sub_target_deg}")
+        self.get_logger().info(f"current deg: {self.current_deg}")
+        self.get_logger().info(f"target deg: {self.target_deg}")
+        self.get_logger().info(f"sub_target deg: {self.sub_target_deg}")
         return self.publish_angular_z(speed, precision, time_out)
 
     def odom_plot(self, deg, precision=0, speed=0.5, time_out=10):
@@ -222,13 +231,13 @@ def main():
     rclpy.init()
     bc = BaseControl()
     try:
-        thread = threading.Thread(target=rclpy.spin, args=(bc, ), daemon=True)
-        thread.start()
+        #thread = threading.Thread(target=rclpy.spin, args=(bc, ), daemon=True)
+        #thread.start()
         time.sleep(0.1)
         #bc.translate_dist(0.3)
-        #bc.rotate_angle(30)
-        bc.odom_plot(-90, 2, 0.2, 10)
+        bc.rotate_angle(30)
+        #bc.odom_plot(-90, 2, 0.2, 10)
     except KeyboardInterrupt:
         pass
-    thread.join()
+    #thread.join()
     rclpy.shutdown()
